@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function ProjectSetup({ project, onSave }) {
+export default function ProjectSetup({ project, onSave, onCancel, saving }) {
   const [form, setForm] = useState({ ...project });
 
   const handleChange = (e) => {
@@ -19,7 +19,7 @@ export default function ProjectSetup({ project, onSave }) {
   return (
     <div className="card card-narrow">
       <div className="card-header">
-        <h2>Project Setup</h2>
+        <h2>{project.name ? 'Edit Project' : 'New Project'}</h2>
         <p className="subtitle">Enter the project details to get started.</p>
       </div>
       <form onSubmit={handleSubmit} className="form">
@@ -56,9 +56,14 @@ export default function ProjectSetup({ project, onSave }) {
             placeholder="Any additional project notes..."
           />
         </div>
-        <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
-            Continue to Shades &rarr;
+        <div className="form-actions" style={{ display: 'flex', gap: '8px' }}>
+          {onCancel && (
+            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving...' : (project.name ? 'Save Changes' : 'Create Project')} &rarr;
           </button>
         </div>
       </form>
