@@ -18,6 +18,10 @@ mkdirSync(dirname(dbPath), { recursive: true });
 
 let db;
 
+function now() {
+  return new Date().toISOString().replace('T', ' ').replace('Z', '').split('.')[0];
+}
+
 async function initDb() {
   const SQL = await initSqlJs();
 
@@ -29,12 +33,12 @@ async function initDb() {
     db = new SQL.Database();
   }
 
-  // Create tables
+  // Create tables (no datetime('now') defaults — sql.js doesn't support them)
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT
     )
   `);
 
@@ -45,33 +49,32 @@ async function initDb() {
       client TEXT DEFAULT '',
       address TEXT DEFAULT '',
       notes TEXT DEFAULT '',
-      created_by INTEGER REFERENCES users(id),
-      updated_by INTEGER REFERENCES users(id),
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_by INTEGER,
+      updated_by INTEGER,
+      created_at TEXT,
+      updated_at TEXT
     )
   `);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS shades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      project_id INTEGER NOT NULL,
       shade_data TEXT NOT NULL,
       sort_order INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT,
+      updated_at TEXT
     )
   `);
 
   // Seed team members
   const seedUsers = ['Mark', 'Tony', 'Ray Carter', 'Caleb', 'Cal', 'Kris Brant'];
-  const insertUser = db.prepare('INSERT OR IGNORE INTO users (name) VALUES (?)');
   for (const name of seedUsers) {
-    insertUser.bind([name]);
-    insertUser.step();
-    insertUser.reset();
+    const existing = db.exec("SELECT id FROM users WHERE name = ?", [name]);
+    if (existing.length === 0 || existing[0].values.length === 0) {
+      db.run('INSERT INTO users (name, created_at) VALUES (?, ?)', [name, now()]);
+    }
   }
-  insertUser.free();
 
   persistDb();
   console.log('Database initialized.');
@@ -87,7 +90,7 @@ function persistDb() {
 // Helper: run a SELECT and return array of row objects
 function queryAll(sql, params = []) {
   const stmt = db.prepare(sql);
-  stmt.bind(params);
+  if (params.length) stmt.bind(params);
   const rows = [];
   while (stmt.step()) {
     rows.push(stmt.getAsObject());
@@ -102,11 +105,13 @@ function queryOne(sql, params = []) {
   return rows.length > 0 ? rows[0] : null;
 }
 
-// Helper: run INSERT/UPDATE/DELETE, persist, return info
+// Helper: run INSERT/UPDATE/DELETE, persist, return last insert rowid
 function execute(sql, params = []) {
   db.run(sql, params);
+  const result = db.exec("SELECT last_insert_rowid() as id");
+  const lastId = result.length > 0 ? result[0].values[0][0] : null;
   persistDb();
-  return { lastId: db.exec("SELECT last_insert_rowid()")[0]?.values[0]?.[0] };
+  return { lastId };
 }
 
 // --- API Routes ---
@@ -171,9 +176,10 @@ app.post('/api/projects', (req, res) => {
   const { name, client, address, notes, userId } = req.body;
   if (!name) return res.status(400).json({ error: 'Project name is required' });
 
+  const ts = now();
   const { lastId } = execute(
-    'INSERT INTO projects (name, client, address, notes, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?)',
-    [name, client || '', address || '', notes || '', userId, userId]
+    'INSERT INTO projects (name, client, address, notes, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, client || '', address || '', notes || '', userId, userId, ts, ts]
   );
 
   const project = queryOne('SELECT * FROM projects WHERE id = ?', [lastId]);
@@ -184,8 +190,8 @@ app.post('/api/projects', (req, res) => {
 app.put('/api/projects/:id', (req, res) => {
   const { name, client, address, notes, userId } = req.body;
   execute(
-    `UPDATE projects SET name = ?, client = ?, address = ?, notes = ?, updated_by = ?, updated_at = datetime('now') WHERE id = ?`,
-    [name, client || '', address || '', notes || '', userId, Number(req.params.id)]
+    `UPDATE projects SET name = ?, client = ?, address = ?, notes = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+    [name, client || '', address || '', notes || '', userId, now(), Number(req.params.id)]
   );
 
   const project = queryOne('SELECT * FROM projects WHERE id = ?', [Number(req.params.id)]);
@@ -194,7 +200,6 @@ app.put('/api/projects/:id', (req, res) => {
 
 // Delete project
 app.delete('/api/projects/:id', (req, res) => {
-  // Delete shades first (sql.js doesn't support ON DELETE CASCADE reliably)
   execute('DELETE FROM shades WHERE project_id = ?', [Number(req.params.id)]);
   execute('DELETE FROM projects WHERE id = ?', [Number(req.params.id)]);
   res.json({ success: true });
@@ -204,26 +209,24 @@ app.delete('/api/projects/:id', (req, res) => {
 app.put('/api/projects/:id/shades', (req, res) => {
   const { shades, userId } = req.body;
   const projectId = Number(req.params.id);
+  const ts = now();
 
   // Delete existing shades
   db.run('DELETE FROM shades WHERE project_id = ?', [projectId]);
 
   // Insert new shades
-  const insertStmt = db.prepare(
-    'INSERT INTO shades (project_id, shade_data, sort_order) VALUES (?, ?, ?)'
-  );
-  shades.forEach((shade, i) => {
-    const { _db_id, _sort_order, ...shadeData } = shade;
-    insertStmt.bind([projectId, JSON.stringify(shadeData), i]);
-    insertStmt.step();
-    insertStmt.reset();
-  });
-  insertStmt.free();
+  for (let i = 0; i < shades.length; i++) {
+    const { _db_id, _sort_order, ...shadeData } = shades[i];
+    db.run(
+      'INSERT INTO shades (project_id, shade_data, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+      [projectId, JSON.stringify(shadeData), i, ts, ts]
+    );
+  }
 
   // Update project timestamp
   db.run(
-    `UPDATE projects SET updated_by = ?, updated_at = datetime('now') WHERE id = ?`,
-    [userId, projectId]
+    `UPDATE projects SET updated_by = ?, updated_at = ? WHERE id = ?`,
+    [userId, ts, projectId]
   );
 
   persistDb();
