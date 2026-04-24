@@ -68,7 +68,7 @@ async function initDb() {
   `);
 
   // Seed team members
-  const seedUsers = ['Mark', 'Tony', 'Ray Carter', 'Caleb', 'Cal', 'Kris', 'Brant', 'Josh'];
+  const seedUsers = ['Mark', 'Tony', 'Ray', 'Carter', 'Caleb', 'Cal', 'Kris', 'Brant', 'Josh'];
   for (const name of seedUsers) {
     const existing = db.exec("SELECT id FROM users WHERE name = ?", [name]);
     if (existing.length === 0 || existing[0].values.length === 0) {
@@ -78,6 +78,7 @@ async function initDb() {
 
   // Clean up old combined user
   db.run("DELETE FROM users WHERE name = 'Kris Brant'");
+  db.run("DELETE FROM users WHERE name = 'Ray Carter'");
 
   persistDb();
   console.log('Database initialized.');
