@@ -1,7 +1,7 @@
 import { calculateSqFt } from '../data/rollerShadeData';
 import { exportToExcel } from '../utils/excelExport';
 
-export default function ShadeList({ project, shades, onAdd, onEdit, onDelete, onDuplicate, onClose }) {
+export default function ShadeList({ project, shades, onAdd, onEdit, onDelete, onDuplicate, onClose, saving }) {
   const handleExport = () => {
     if (shades.length === 0) {
       alert('Add at least one shade before exporting.');
@@ -103,8 +103,8 @@ export default function ShadeList({ project, shades, onAdd, onEdit, onDelete, on
 
       <div className="card-footer">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="btn btn-secondary" onClick={onClose}>
-            &larr; Close Project
+          <button className="btn btn-primary" onClick={onClose} disabled={saving}>
+            {saving ? 'Saving...' : 'Save & Close Project'}
           </button>
           {shades.length > 0 && (
             <span className="shade-count">{shades.length} shade{shades.length !== 1 ? 's' : ''} configured</span>

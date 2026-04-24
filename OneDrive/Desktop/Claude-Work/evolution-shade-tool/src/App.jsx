@@ -128,6 +128,22 @@ function App() {
     setShades([]);
   };
 
+  const handleSaveAndClose = async () => {
+    if (projectId && shades.length > 0) {
+      try {
+        setSaving(true);
+        await api.saveShades(projectId, shades, user.id);
+        await api.updateProject(projectId, { ...project, userId: user.id });
+      } catch (err) {
+        alert('Failed to save project: ' + err.message);
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
+    handleBackToDashboard();
+  };
+
   // --- Login gate ---
   if (!user) {
     return <Login onLogin={handleLogin} />;
@@ -188,7 +204,8 @@ function App() {
             onEdit={handleEditShade}
             onDelete={handleDeleteShade}
             onDuplicate={handleDuplicateShade}
-            onClose={handleBackToDashboard}
+            onClose={handleSaveAndClose}
+            saving={saving}
           />
         )}
         {view === 'wizard' && (
