@@ -188,6 +188,7 @@ function App() {
             onEdit={handleEditShade}
             onDelete={handleDeleteShade}
             onDuplicate={handleDuplicateShade}
+            onClose={handleBackToDashboard}
           />
         )}
         {view === 'wizard' && (

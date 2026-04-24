@@ -1,7 +1,7 @@
 import { calculateSqFt } from '../data/rollerShadeData';
 import { exportToExcel } from '../utils/excelExport';
 
-export default function ShadeList({ project, shades, onAdd, onEdit, onDelete, onDuplicate }) {
+export default function ShadeList({ project, shades, onAdd, onEdit, onDelete, onDuplicate, onClose }) {
   const handleExport = () => {
     if (shades.length === 0) {
       alert('Add at least one shade before exporting.');
@@ -101,19 +101,26 @@ export default function ShadeList({ project, shades, onAdd, onEdit, onDelete, on
         </div>
       )}
 
-      {shades.length > 0 && (
-        <div className="card-footer">
-          <span className="shade-count">{shades.length} shade{shades.length !== 1 ? 's' : ''} configured</span>
-          <div className="card-header-actions">
+      <div className="card-footer">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button className="btn btn-secondary" onClick={onClose}>
+            &larr; Close Project
+          </button>
+          {shades.length > 0 && (
+            <span className="shade-count">{shades.length} shade{shades.length !== 1 ? 's' : ''} configured</span>
+          )}
+        </div>
+        <div className="card-header-actions">
+          {shades.length > 0 && (
             <button className="btn btn-secondary" onClick={handleExport}>
               Export to Excel
             </button>
-            <button className="btn btn-primary" onClick={onAdd}>
-              + Add Another Shade
-            </button>
-          </div>
+          )}
+          <button className="btn btn-primary" onClick={onAdd}>
+            + Add {shades.length > 0 ? 'Another' : 'Your First'} Shade
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -13,6 +13,14 @@ export default function ProjectSetup({ project, onSave, onCancel, saving }) {
       alert('Please enter a project name.');
       return;
     }
+    if (!form.client.trim()) {
+      alert('Please enter a client / builder name.');
+      return;
+    }
+    if (!form.notes.trim()) {
+      alert('Please enter a project summary.');
+      return;
+    }
     onSave(form);
   };
 
@@ -33,11 +41,12 @@ export default function ProjectSetup({ project, onSave, onCancel, saving }) {
           />
         </div>
         <div className="form-group">
-          <label htmlFor="client">Client Name</label>
+          <label htmlFor="client">Client / Builder Name *</label>
           <input
             id="client" name="client" type="text"
             value={form.client} onChange={handleChange}
             placeholder="e.g. John Smith"
+            required
           />
         </div>
         <div className="form-group">
@@ -49,11 +58,12 @@ export default function ProjectSetup({ project, onSave, onCancel, saving }) {
           />
         </div>
         <div className="form-group">
-          <label htmlFor="notes">Notes</label>
+          <label htmlFor="notes">Summary *</label>
           <textarea
             id="notes" name="notes" rows="3"
             value={form.notes} onChange={handleChange}
-            placeholder="Any additional project notes..."
+            placeholder="Brief project summary..."
+            required
           />
         </div>
         <div className="form-actions" style={{ display: 'flex', gap: '8px' }}>
