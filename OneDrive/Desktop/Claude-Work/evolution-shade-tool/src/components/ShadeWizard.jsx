@@ -111,11 +111,11 @@ export default function ShadeWizard({ shade, shadeCount, onComplete, onCancel })
       </div>
       <div className="form-row">
         <div className="form-group flex-1">
-          <label>Width (inches)</label>
+          <label>Opening Width (inches)</label>
           <input name="width" type="number" min="0" step="0.125" value={form.width} onChange={handleInputChange} placeholder="e.g. 72" />
         </div>
         <div className="form-group flex-1">
-          <label>Height (inches)</label>
+          <label>Opening Height (inches)</label>
           <input name="height" type="number" min="0" step="0.125" value={form.height} onChange={handleInputChange} placeholder="e.g. 96" />
         </div>
         <div className="form-group flex-1">
