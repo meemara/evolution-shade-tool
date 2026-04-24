@@ -76,6 +76,9 @@ async function initDb() {
     }
   }
 
+  // Clean up old combined user
+  db.run("DELETE FROM users WHERE name = 'Kris Brant'");
+
   persistDb();
   console.log('Database initialized.');
 }
